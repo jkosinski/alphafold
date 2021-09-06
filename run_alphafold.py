@@ -104,6 +104,18 @@ def _check_flag(flag_name: str, preset: str, should_be_set: bool):
     raise ValueError(f'{flag_name} must {verb} set for preset "{preset}"')
 
 
+def are_seq_searches_ready(output_dir):
+  msa_output_dir = os.path.join(output_dir, 'msas')
+
+  return all(map(os.path.exists,
+      (os.path.join(output_dir, 'features.pkl'),
+      os.path.join(msa_output_dir, 'bfd_uniclust_hits.a3m'),
+      os.path.join(msa_output_dir, 'uniref90_hits.sto'),
+      os.path.join(msa_output_dir, 'mgnify_hits.sto'),
+      os.path.join(msa_output_dir, 'pdb70_hits.hhr'))
+    
+    ))
+
 def predict_structure(
     fasta_path: str,
     fasta_name: str,
@@ -124,16 +136,20 @@ def predict_structure(
 
   # Get features.
   t_0 = time.time()
-  feature_dict = data_pipeline.process(
-      input_fasta_path=fasta_path,
-      msa_output_dir=msa_output_dir)
-  timings['features'] = time.time() - t_0
-
-  # Write out features as a pickled dictionary.
   features_output_path = os.path.join(output_dir, 'features.pkl')
-  with open(features_output_path, 'wb') as f:
-    pickle.dump(feature_dict, f, protocol=4)
+  if not are_seq_searches_ready(output_dir): 
+    feature_dict = data_pipeline.process(
+        input_fasta_path=fasta_path,
+        msa_output_dir=msa_output_dir)
 
+    # Write out features as a pickled dictionary.
+    with open(features_output_path, 'wb') as f:
+      pickle.dump(feature_dict, f, protocol=4)
+
+  else:
+    feature_dict = pickle.load(open(features_output_path, 'rb'))
+
+  timings['features'] = time.time() - t_0
   relaxed_pdbs = {}
   plddts = {}
 
