@@ -1,5 +1,10 @@
 ![header](imgs/header.jpg)
 
+# Custom AlphaFold
+
+This branch contains modifications from https://github.com/sokrypton/ColabFold AlphaFold2_advanced.
+Runs as a command line script instead of notebook.
+
 # AlphaFold
 
 This package provides an implementation of the inference pipeline of AlphaFold
