@@ -44,69 +44,9 @@ from IPython.utils import io
 import subprocess
 import tqdm.notebook
 
-GIT_REPO = 'https://github.com/deepmind/alphafold'
-SOURCE_URL = 'https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar'
-PARAMS_DIR = './alphafold/data/params'
-PARAMS_PATH = os.path.join(PARAMS_DIR, os.path.basename(SOURCE_URL))
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-# if not already installed
-try:
-  total = 55
-  with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
-    with io.capture_output() as captured:
-      if not os.path.isdir("alphafold"):
-#         %shell rm -rf alphafold
-#         %shell git clone {GIT_REPO} alphafold
-#         %shell (cd alphafold; git checkout 1e216f93f06aa04aa699562f504db1d02c3b704c --quiet)
-
-        # colabfold patches
-#         %shell mkdir --parents tmp
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/colabfold.py
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/pairmsa.py
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/protein.patch -P tmp/
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/config.patch -P tmp/
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/model.patch -P tmp/
-#         %shell wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/modules.patch -P tmp/
-
-        # install hhsuite
-#         %shell curl -fsSL https://github.com/soedinglab/hh-suite/releases/download/v3.3.0/hhsuite-3.3.0-SSE2-Linux.tar.gz | tar xz -C tmp/
-
-        # Apply multi-chain patch from Lim Heo @huhlim
-#         %shell patch -u alphafold/alphafold/common/protein.py -i tmp/protein.patch
-        
-        # Apply patch to dynamically control number of recycles (idea from Ryan Kibler)
-#         %shell patch -u alphafold/alphafold/model/model.py -i tmp/model.patch
-#         %shell patch -u alphafold/alphafold/model/modules.py -i tmp/modules.patch
-#         %shell patch -u alphafold/alphafold/model/config.py -i tmp/config.patch
-        pbar.update(4)
-
-#         %shell pip3 install ./alphafold
-        pbar.update(5)
-      
-        # speedup from kaczmarj
-#         %shell mkdir --parents "{PARAMS_DIR}"
-#         %shell curl -fsSL "{SOURCE_URL}" | tar x -C "{PARAMS_DIR}"
-        pbar.update(14+27)
-
-        #######################################################################
-#         %shell sudo apt install --quiet --yes hmmer
-        pbar.update(3)
-
-        # Install py3dmol.
-#         %shell pip install py3dmol
-        pbar.update(1)
-
-        # Create a ramdisk to store a database chunk to make Jackhmmer run fast.
-#         %shell sudo mkdir -m 777 --parents /tmp/ramdisk
-#         %shell sudo mount -t tmpfs -o size=9G ramdisk /tmp/ramdisk
-        pbar.update(1)
-      else:
-        pbar.update(55)
-
-except subprocess.CalledProcessError:
-  print(captured)
-  raise
+#Removed the original installation and download code, as we have all of that installed
 
 ########################################################################################
 # --- Python imports ---
@@ -115,17 +55,15 @@ import pairmsa
 import sys
 import pickle
 
-if "/content/tmp/bin" not in os.environ['PATH']:
-  os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
+# if "/content/tmp/bin" not in os.environ['PATH']:
+#   os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
 
 from urllib import request
 from concurrent import futures
-from google.colab import files
 import json
 from matplotlib import gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import py3Dmol
 
 from alphafold.model import model
 from alphafold.model import config
@@ -136,6 +74,7 @@ from alphafold.data import pipeline
 from alphafold.data.tools import jackhmmer
 
 from alphafold.common import protein
+
 
 def run_jackhmmer(sequence, prefix):
 
@@ -244,14 +183,17 @@ def run_jackhmmer(sequence, prefix):
 import re
 
 # define sequence
-sequence = 'PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK' #@param {type:"string"}
+#sequence = 'PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK:PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK' #@param {type:"string"}
+#sequence = 'AKRHALESWRQLVEIILTACPQDLIQAEDRQLIIRDILQDVHDKILDDEAAQELMPVVAGAVFTLTAHLSQAVLTEQKETSVLGFASIGDSSLYIILKKLLDFILKTGGGFQRVRTHLYGSLLYYLQIAQRPDEPDTLEAAKKTMWERLTAPEDVFSKLQRENIAIIESYGAALMEVVCRDACDGHEIGRMLALALLDRIVSVDKQQQWLLYLSNSGYLKVLVDSLVEDDRTLQSLLTPQPPLLKALYTYESKMAFLTRVAKIQQGALELLRSGVIVRLAQCQVYDMRPETDPQSMFGMRDPPMFIPTPVDRYRQILLPALQLCQVILTSSMAQHLQAAGQVLQFLISHSDTIQAILRCQDVS:LEPVKDTDIQGFLKNEKDNALLSAIEESRKRTFGMAEEYHRESML' #Nup93
+sequence = 'MATAVSRPCAGRSRDILWRVLGWRIVASIVWSVLFLPICTTVFIIFSRIDLFHPIQWLSDSFSDLYSSYVIFYFLLLSVVIIIISIFNVEFYAVVPSIPCSRLALIGKIIHPQQLMHSFIHAAMGMVMAWCAAVITQGQYSFLVVPCTGTNSFGSPAAQTCLNEYHLFFLLTGAFMGYSYSLLYFVNNMNYLPFPIIQQYKFLRFRRSLLLLVKHSCVESLFLVRNFCILYYFLGYIPKAWISTAMNLHIDEQVHRPLDTVSGLLNLSLLYHVWLCGVFLLTTWYVSWILFKIYATEAHVFPVQPPFAEGSDECLPKVLNSNPPPIIKYLALQDLMLLSQYSPSRRQEVFSLSQPGGHPHNWTAISRECLNLLNGMTQKLILYQEAAATNGRVSSSYPVEPKKLNSPEETAFQTPKSSQMPRPSVPPLVKTSLFSSKLSTPDVVSPFGTPFGSSVMNRMAGIFDVNTCYGSPQSPQLIRRGPRLWTSASDQQMTEFSNPSPSTSISAEGKTMRQPSVIYSWIQNKREQIKNFLSKRVLIMYFFSKHPEASIQAVFSDAQMHIWALEGLSHLVAASFTEDRFGVVQTTLPAILNTLLTLQEAVDKYFKLPHASSKPPRISGSLVDTSYKTLRFAFRASLKTAIYRITTTFGEHLNAVQASAEHQKRLQQFLEFKE:MCSLGLFPPPPPRGQVTLYEHNNELVTGSSYESPPPDFRGQWINLPVLQLTKDPLKTPGRLDHGTRTAFIHHREQVWKRCINIWRDVGLFGVLNEIANSEEEVFEWVKTASGWALALCRWASSLHGSLFPHLSLRSEDLIAEFAQVTNWSSCCLRVFAWHPHTNKFAVALLDDSVRVYNASSTIVPSLKHRLQRNVASLAWKPLSASVLAVACQSCILIWTLDPTSLSTRPSSGCAQVLSHPGHTPVTSLAWAPSGGRLLSASPVDAAIRVWDVSTETCVPLPWFRGGGVTNLLWSPDGSKILATTPSAVFRVWEAQMWTCERWPTLSGRCQTGCWSPDGSRLLFTVLGEPLIYSLSFPERCGEGKGCVGGAKSATIVADLSETTIQTPDGEERLGGEAHSMVWDPSGERLAVLMKGKPRVQDGKPVILLFRTRNSPVFELLPCGIIQGEPGAQPQLITFHPSFNKGALLSVGWSTGRIAHIPLYFVNAQFPRFSPVLGRAQEPPAGGGGSIHDLPLFTETSPTSAPWDPLPGPPPVLPHSPHSHL'
 sequence = re.sub("[^A-Z:/]", "", sequence.upper())
 sequence = re.sub(":+",":",sequence)
 sequence = re.sub("/+","/",sequence)
 sequence = re.sub("^[:/]+","",sequence)
 sequence = re.sub("[:/]+$","",sequence)
 
-jobname = "test" #@param {type:"string"}
+# jobname = "test" #@param {type:"string"}
+jobname = "NDC1_Aladin_norelax" #@param {type:"string"}
 jobname = re.sub(r'\W+', '', jobname)
 
 # define number of copies
@@ -272,6 +214,7 @@ homooligomers = [int(h) for h in homooligomer.split(":")]
 #@markdown - `homooligomer` Define number of copies in a homo-oligomeric assembly.
 #@markdown  - Use `:` to specify different homooligomeric state (copy numer) for each component of the complex. 
 #@markdown  - For example, **sequence:**`ABC:DEF`, **homooligomer:** `2:1`, the first protein `ABC` will be modeled as a homodimer (2 copies) and second `DEF` a monomer (1 copy).
+
 
 ori_sequence = sequence
 sequence = sequence.replace("/","").replace(":","")
@@ -648,6 +591,7 @@ for seq,h in zip(ori_sequence.split(":"),homooligomers):
 Ls_plot = sum([[len(seq)]*h for seq,h in zip(seqs,homooligomers)],[])
 feature_dict['residue_index'] = cf.chain_break(feature_dict['residue_index'], Ls)
 
+
 ###########################
 # run alphafold
 ###########################
@@ -696,7 +640,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
       cfg.model.recycle_tol = tol
       cfg.data.eval.num_ensemble = num_ensemble
 
-      params = data.get_model_haiku_params(name,'./alphafold/data')
+      params = data.get_model_haiku_params(name,'/scratch/AlphaFold_DBs/')
       model_runner = model.RunModel(cfg, params, is_training=is_training)
       COMPILED = compiled
       recompile = False
@@ -743,7 +687,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
         pbar.set_description(f'Running {key}')
 
         # replace model parameters
-        params = data.get_model_haiku_params(name, './alphafold/data')
+        params = data.get_model_haiku_params(name, '/scratch/AlphaFold_DBs/')
         for k in model_runner.params.keys():
           model_runner.params[k] = params[k]
 
@@ -762,7 +706,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
     # go through each model
     for num, model_name in enumerate(model_names):
       name = model_name+"_ptm" if use_ptm else model_name
-      params = data.get_model_haiku_params(name, './alphafold/data')  
+      params = data.get_model_haiku_params(name, '/scratch/AlphaFold_DBs/')  
       cfg = config.model_config(name)
       cfg.data.common.num_recycle = cfg.model.num_recycle = max_recycles
       cfg.model.recycle_tol = tol
@@ -824,44 +768,7 @@ elif num_relax == "Top5":
 else:
   num_relax = len(model_names) * num_samples
 
-#@markdown - `num_relax` specify how many of the top ranked structures to relax
-if num_relax > 0 and not os.path.isfile("stereo_chemical_props.txt"):
-  try:
-    total = 45
-    with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
-      pbar.set_description(f'INSTALL AMBER')
-      with io.capture_output() as captured:
-        # Install OpenMM and pdbfixer.
-#         %shell rm -rf /opt/conda
-#         %shell wget -q -P /tmp \
-          https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-            && bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
-            && rm /tmp/Miniconda3-latest-Linux-x86_64.sh
-        pbar.update(4)
-
-        PATH=%env PATH
-#         %env PATH=/opt/conda/bin:{PATH}
-#         %shell conda update -qy conda \
-            && conda install -qy -c conda-forge \
-              python=3.7 \
-              openmm=7.5.1 \
-              pdbfixer
-        pbar.update(40)
-
-#         %shell wget -q -P /content \
-          https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
-        pbar.update(1)
-#         %shell mkdir -p /content/alphafold/common
-#         %shell cp -f /content/stereo_chemical_props.txt /content/alphafold/common
-
-        # Apply OpenMM patch.
-#         %shell pushd /opt/conda/lib/python3.7/site-packages/ && \
-            patch -p0 < /content/alphafold/docker/openmm.patch && \
-            popd
-
-  except subprocess.CalledProcessError:
-    print(captured)
-    raise
+#removed installation code
 
 if num_relax > 0:
   if "relax" not in dir():
@@ -902,7 +809,7 @@ pred_output_path = os.path.join(output_dir,f'{prefix}_relaxed.pdb')
 if not os.path.isfile(pred_output_path):
   pred_output_path = os.path.join(output_dir,f'{prefix}_unrelaxed.pdb') 
 
-cf.show_pdb(pred_output_path, show_sidechains, show_mainchains, color, Ls=Ls_plot).show()
+#cf.show_pdb(pred_output_path, show_sidechains, show_mainchains, color, Ls=Ls_plot).show()
 if color == "lDDT": cf.plot_plddt_legend().show()  
 if use_ptm:
   cf.plot_confidence(outs[key]["plddt"], outs[key]["pae"], Ls=Ls_plot).show()
@@ -1016,5 +923,5 @@ with open(settings_path, "w") as text_file:
     text_file.write(line+"\n")
 
 # --- Download the predictions ---
-!zip -FSr {output_dir}.zip {output_dir}
-files.download(f'{output_dir}.zip')
+#!zip -FSr {output_dir}.zip {output_dir}
+#files.download(f'{output_dir}.zip')
