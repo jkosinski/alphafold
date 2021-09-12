@@ -75,6 +75,48 @@ from alphafold.data.tools import jackhmmer
 
 from alphafold.common import protein
 
+import argparse
+from itertools import groupby
+
+parser = argparse.ArgumentParser(description='Model complexes with Alphafold modified by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).')
+parser.add_argument('--fasta', type=str, required=True)
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--jobname')
+group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
+parser.add_argument('--homooligomer', type=str, help='Define number of copies in a homo-oligomeric assembly.', default='1')
+parser.add_argument('--max_recycles', type=int, default=3, help='Controls the maximum number of times the structure is fed back into the neural network for refinement. (3 recommended)')
+args = parser.parse_args()
+
+if args.jobprefix:
+  args.jobname = '{jobprefix}_max_recycles{max_recycles}'.format(**vars(args))
+
+for k, v in vars(args).items():
+  print('{0}: {1}'.format(k, v))
+
+def fasta_iter(fh):
+    """Return iterator over FASTA file with multiple sequences.
+
+    Modified from Brent Pedersen
+    Correct Way To Parse A Fasta File In Python
+    given a fasta file. yield tuples of header, sequence
+
+    :param fh: File Handle to the FASTA file
+
+    :return: 2-element tuple with header and sequence strings
+    """
+
+    # ditch the boolean (x[0]) and just keep the header or sequence since
+    # we know they alternate.
+    faiter = (x[1] for x in groupby(fh, lambda line: line[0] == ">"))
+
+    for header in faiter:
+        # drop the ">"
+        headerStr = header.__next__()[1:].strip()
+
+        # join all sequence lines to one.
+        seq = "".join(s.strip() for s in faiter.__next__())
+
+        yield (headerStr, seq)
 
 def run_jackhmmer(sequence, prefix):
 
@@ -183,19 +225,20 @@ def run_jackhmmer(sequence, prefix):
 import re
 
 # define sequence
-sequence = 'PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK:PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK' #@param {type:"string"}
+with open(args.fasta) as fh:
+  sequence = list(fasta_iter(fh))[0][1]
+
 sequence = re.sub("[^A-Z:/]", "", sequence.upper())
 sequence = re.sub(":+",":",sequence)
 sequence = re.sub("/+","/",sequence)
 sequence = re.sub("^[:/]+","",sequence)
 sequence = re.sub("[:/]+$","",sequence)
 
-# jobname = "test" #@param {type:"string"}
-jobname = "test" #@param {type:"string"}
+jobname = args.jobname
 jobname = re.sub(r'\W+', '', jobname)
 
 # define number of copies
-homooligomer =  "1" #@param {type:"string"}
+homooligomer =  args.homooligomer
 homooligomer = re.sub("[:/]+",":",homooligomer)
 homooligomer = re.sub("^[:/]+","",homooligomer)
 homooligomer = re.sub("[:/]+$","",homooligomer)
@@ -232,7 +275,7 @@ if len(seqs) != len(homooligomers):
 full_sequence = "".join([s*h for s,h in zip(seqs,homooligomers)])
 
 # prediction directory
-output_dir = 'prediction_' + jobname + '_' + cf.get_hash(full_sequence)[:5]
+output_dir = jobname
 os.makedirs(output_dir, exist_ok=True)
 # delete existing files in working directory
 for f in os.listdir(output_dir):
@@ -502,7 +545,7 @@ show_images = True #@param {type:"boolean"}
 num_models = 5 #@param [1,2,3,4,5] {type:"raw"}
 use_ptm = True #@param {type:"boolean"}
 num_ensemble = 1 #@param [1,8] {type:"raw"}
-max_recycles = 3 #@param [1,3,6,12,24,48] {type:"raw"}
+max_recycles = args.max_recycles #@param [1,3,6,12,24,48] {type:"raw"}
 tol = 0 #@param [0,0.1,0.5,1] {type:"raw"}
 is_training = False #@param {type:"boolean"}
 num_samples = 1 #@param [1,2,4,8,16,32] {type:"raw"}
