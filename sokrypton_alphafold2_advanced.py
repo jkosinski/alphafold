@@ -30,6 +30,25 @@ See [ColabFold](https://github.com/sokrypton/ColabFold/) for other related noteb
 #@markdown Please execute this cell by pressing the _Play_ button 
 #@markdown on the left.
 
+
+import argparse
+from itertools import groupby
+
+parser = argparse.ArgumentParser(description='Model complexes with Alphafold modified by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).')
+parser.add_argument('--fasta', type=str, required=True)
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--jobname')
+group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
+parser.add_argument('--homooligomer', type=str, help='Define number of copies in a homo-oligomeric assembly.', default='1')
+parser.add_argument('--max_recycles', type=int, default=3, help='Controls the maximum number of times the structure is fed back into the neural network for refinement. (3 recommended)')
+args = parser.parse_args()
+
+if args.jobprefix:
+  args.jobname = '{jobprefix}_max_recycles{max_recycles}'.format(**vars(args))
+
+for k, v in vars(args).items():
+  print('{0}: {1}'.format(k, v))
+
 import os
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
@@ -74,24 +93,6 @@ from alphafold.data import pipeline
 from alphafold.data.tools import jackhmmer
 
 from alphafold.common import protein
-
-import argparse
-from itertools import groupby
-
-parser = argparse.ArgumentParser(description='Model complexes with Alphafold modified by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).')
-parser.add_argument('--fasta', type=str, required=True)
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('--jobname')
-group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
-parser.add_argument('--homooligomer', type=str, help='Define number of copies in a homo-oligomeric assembly.', default='1')
-parser.add_argument('--max_recycles', type=int, default=3, help='Controls the maximum number of times the structure is fed back into the neural network for refinement. (3 recommended)')
-args = parser.parse_args()
-
-if args.jobprefix:
-  args.jobname = '{jobprefix}_max_recycles{max_recycles}'.format(**vars(args))
-
-for k, v in vars(args).items():
-  print('{0}: {1}'.format(k, v))
 
 def fasta_iter(fh):
     """Return iterator over FASTA file with multiple sequences.
