@@ -35,7 +35,7 @@ import argparse
 from itertools import groupby
 
 parser = argparse.ArgumentParser(description='Model complexes with Alphafold modified by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).')
-parser.add_argument('--fasta', type=str, required=True)
+parser.add_argument('--fasta', type=str, required=True, help='FASTA-formatted file with the protein sequence')
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--jobname')
 group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
