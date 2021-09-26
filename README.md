@@ -28,6 +28,7 @@ Runs as a command line script instead of notebook.
     ```bash
     module load matplotlib/3.3.3-fosscuda-2020b IPython/7.18.1-GCCcore-10.2.0 tqdm/4.60.0-GCCcore-10.2.0 #required modules compatible with fosscuda-2020b
     ```
+1. Prepare FASTA file with the sequence formated as described in the original AlphaFold2_advanced notebook from https://github.com/sokrypton/ColabFold.
 
 1. Basic command on a workstation or interactive node:
     ```bash
@@ -36,6 +37,9 @@ Runs as a command line script instead of notebook.
     python /g/kosinski/kosinski/devel/alphafold/sokrypton_alphafold2_advanced.py --fasta test.fasta --homooligomer 2 --jobname test
     ```
     Run the script with `-h` to see help.
+    
+    `--homooligomer` can be formated as in the original notebook (e.g. `2:2` for heterotetramer with 2 copies of one protein, and 2 copies of the second).
+    You probably want to increase `--max_recycles` for bigger complexes.
 
 1. Submit on slurm cluster:
     ```bash
