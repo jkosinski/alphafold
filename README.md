@@ -5,6 +5,48 @@
 This branch contains modifications from https://github.com/sokrypton/ColabFold AlphaFold2_advanced.
 Runs as a command line script instead of notebook.
 
+
+
+## Installation instructions and running:
+    ```bash
+    cd <some software directory of choice)
+    git clone https://github.com/jkosinski/alphafold.git
+    cd alphafold
+    git checkout sokrypton_alphafold2_advanced
+
+    #to update the software when Jan changes sth:
+    cd alphafold
+    git pull origin sokrypton_alphafold2_advanced
+    ```
+
+
+## USAGE INSTRUCTIONS
+
+1. load AlphaFold module just to load dependencies for AlphaFold
+    ```bash
+    module load AlphaFold/2.0.0-20210910_02_1d43aaf-fosscuda-2020b
+    ```
+
+1. load dependencies for the colab script
+    ```bash
+    module load matplotlib/3.3.3-fosscuda-2020b IPython/7.18.1-GCCcore-10.2.0 tqdm/4.60.0-GCCcore-10.2.0 #required modules compatible with fosscuda-2020b
+    ```
+
+1. Basic command on a workstation or interactive node:
+    ```bash
+    time PYTHONPATH=/g/kosinski/kosinski/devel/alphafold:$PYTHONPATH \
+    TF_FORCE_UNIFIED_MEMORY='1' XLA_PYTHON_CLIENT_MEM_FRACTION='4.0' \
+    python /g/kosinski/kosinski/devel/alphafold/sokrypton_alphafold2_advanced.py --fasta test.fasta --homooligomer 2 --jobname test
+    ```
+    Run the script with `-h` to see help.
+
+1. Submit on slurm cluster:
+    ```bash
+    sbatch --export=fasta='test.fasta',jobprefix='test,homooligomer=2,max_recycles=3' --job-name=test run_AF_complex.sh
+    ```
+
+To understand mode how it works and modify other parameters you need to read the run_AF_complex.sh and sokrypton_alphafold2_advanced.py scripts.
+
 # AlphaFold
 
 This package provides an implementation of the inference pipeline of AlphaFold
