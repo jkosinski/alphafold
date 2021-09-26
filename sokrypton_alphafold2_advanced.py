@@ -41,10 +41,19 @@ group.add_argument('--jobname')
 group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
 parser.add_argument('--homooligomer', type=str, help='Define number of copies in a homo-oligomeric assembly.', default='1')
 parser.add_argument('--max_recycles', type=int, default=3, help='Controls the maximum number of times the structure is fed back into the neural network for refinement. (3 recommended)')
+parser.add_argument('--msa_method', type=str, default='mmseqs2', choices=['mmseqs2', 'jackhmmer', 'single_sequence', 'precomputed'], help='Method for generating MSAs, (default: %(default)s)')
+parser.add_argument('--pair_mode', type=str, default='unpaired', choices=['unpaired', 'unpaired+paired', 'paired'], help='Mode for pairing sequences, (default: %(default)s)')
+parser.add_argument('--data_dir', type=str, default='/scratch/AlphaFold_DBs/', help='Path to the directory above AlphaFold params directory, (default: %(default)s)')
+parser.add_argument('--uniref90_database_path', type=str, default='/scratch/AlphaFold_DBs/uniref90/uniref90.fasta', help='Path to uniref90, (default: %(default)s)')
+parser.add_argument('--bfd_database_path', type=str, default='/scratch/AlphaFold_DBs/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt', help='Path to bfd, (default: %(default)s)')
+parser.add_argument('--mgnify_database_path', type=str, default='/scratch/AlphaFold_DBs/mgnify/mgy_clusters.fa', help='Path to bfd, (default: %(default)s)')
+
 args = parser.parse_args()
 
 if args.jobprefix:
-  args.jobname = '{jobprefix}_max_recycles{max_recycles}'.format(**vars(args))
+  homooligomer = args.homooligomer.replace(':','_')
+  pair_mode = args.pair_mode.replace('+','')
+  args.jobname = '{jobprefix}_max_recycles{max_recycles}_{homooligomer1}mer_{msa_method}_{pair_mode1}'.format(homooligomer1=homooligomer, pair_mode1=pair_mode, **vars(args))
 
 for k, v in vars(args).items():
   print('{0}: {1}'.format(k, v))
@@ -91,6 +100,7 @@ from alphafold.model import data
 from alphafold.data import parsers
 from alphafold.data import pipeline
 from alphafold.data.tools import jackhmmer
+from alphafold.data.tools import hhblits
 
 from alphafold.common import protein
 
@@ -147,43 +157,25 @@ def run_jackhmmer(sequence, prefix):
       break
 
     jackhmmer_binary_path = '/usr/bin/jackhmmer'
+    hhblits_binary_path = '/usr/bin/hhblits'
     dbs = []
 
-    num_jackhmmer_chunks = {'uniref90': 59, 'smallbfd': 17, 'mgnify': 71}
-    total_jackhmmer_chunks = sum(num_jackhmmer_chunks.values())
-    with tqdm.notebook.tqdm(total=total_jackhmmer_chunks, bar_format=TQDM_BAR_FORMAT) as pbar:
-      def jackhmmer_chunk_callback(i):
-        pbar.update(n=1)
+    jackhmmer_uniref90_runner = jackhmmer.Jackhmmer(
+        binary_path=jackhmmer_binary_path,
+        database_path=args.uniref90_database_path,)
+    dbs.append(('uniref90', jackhmmer_uniref90_runner.query(fasta_path)))
 
-      pbar.set_description('Searching uniref90')
-      jackhmmer_uniref90_runner = jackhmmer.Jackhmmer(
-          binary_path=jackhmmer_binary_path,
-          database_path=f'https://storage.googleapis.com/alphafold-colab{source}/latest/uniref90_2021_03.fasta',
-          get_tblout=True,
-          num_streamed_chunks=num_jackhmmer_chunks['uniref90'],
-          streaming_callback=jackhmmer_chunk_callback,
-          z_value=135301051)
-      dbs.append(('uniref90', jackhmmer_uniref90_runner.query(fasta_path)))
+    bfd_database_path = args.bfd_database_path
+    uniclust30_database_path = args.uniclust30_database_path
+    hhblits_bfd_uniclust_runner = hhblits.HHBlits(
+          binary_path=hhblits_binary_path,
+          databases=[bfd_database_path, uniclust30_database_path])
+    dbs.append(('bfd', hhblits_bfd_uniclust_runner.query(fasta_path)))
 
-      pbar.set_description('Searching smallbfd')
-      jackhmmer_smallbfd_runner = jackhmmer.Jackhmmer(
-          binary_path=jackhmmer_binary_path,
-          database_path=f'https://storage.googleapis.com/alphafold-colab{source}/latest/bfd-first_non_consensus_sequences.fasta',
-          get_tblout=True,
-          num_streamed_chunks=num_jackhmmer_chunks['smallbfd'],
-          streaming_callback=jackhmmer_chunk_callback,
-          z_value=65984053)
-      dbs.append(('smallbfd', jackhmmer_smallbfd_runner.query(fasta_path)))
-
-      pbar.set_description('Searching mgnify')
-      jackhmmer_mgnify_runner = jackhmmer.Jackhmmer(
-          binary_path=jackhmmer_binary_path,
-          database_path=f'https://storage.googleapis.com/alphafold-colab{source}/latest/mgy_clusters_2019_05.fasta',
-          get_tblout=True,
-          num_streamed_chunks=num_jackhmmer_chunks['mgnify'],
-          streaming_callback=jackhmmer_chunk_callback,
-          z_value=304820129)
-      dbs.append(('mgnify', jackhmmer_mgnify_runner.query(fasta_path)))
+    jackhmmer_mgnify_runner = jackhmmer.Jackhmmer(
+        binary_path=jackhmmer_binary_path,
+        database_path=args.mgnify_database_path)
+    dbs.append(('mgnify', jackhmmer_mgnify_runner.query(fasta_path)))
 
     # --- Extract the MSAs and visualize ---
     # Extract the MSAs from the Stockholm files.
@@ -198,6 +190,7 @@ def run_jackhmmer(sequence, prefix):
       for i, result in enumerate(db_results):
         msa, deletion_matrix, target_names = parsers.parse_stockholm(result['sto'])
         e_values_dict = parsers.parse_e_values_from_tblout(result['tbl'])
+        print('e_values_dict', e_values_dict)
         e_values = [e_values_dict[t.split('/')[0]] for t in target_names]
         zipped_results = zip(msa, deletion_matrix, target_names, e_values)
         if i != 0:
@@ -290,9 +283,6 @@ if not set(full_sequence).issubset(aatypes):
 if len(full_sequence) < MIN_SEQUENCE_LENGTH:
   raise Exception(f'Input sequence is too short: {len(full_sequence)} amino acids, while the minimum is {MIN_SEQUENCE_LENGTH}')
 
-if len(full_sequence) > 1400:
-  print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(full_sequence)}! Run Alphafold may crash.")
-
 print(f"homooligomer: '{homooligomer}'")
 print(f"total_length: '{len(full_sequence)}'")
 print(f"working_directory: '{output_dir}'")
@@ -306,7 +296,7 @@ print(f"working_directory: '{output_dir}'")
 #@markdown (Note that the search against databases and the actual prediction can take some time, from minutes to hours, depending on the length of the protein and what type of GPU you are allocated by Colab.)
 
 #@markdown ---
-msa_method = "mmseqs2" #@param ["mmseqs2","jackhmmer","single_sequence","precomputed"]
+msa_method = args.msa_method #@param ["mmseqs2","jackhmmer","single_sequence","precomputed"]
 #@markdown - `mmseqs2` - FAST method from [ColabFold](https://github.com/sokrypton/ColabFold)
 #@markdown - `jackhmmer` - default method from Deepmind (SLOW, but may find more/less sequences).
 #@markdown - `single_sequence` - use single sequence input
@@ -325,7 +315,7 @@ msa_format = "fas" #@param ["fas","a2m","a3m","sto","psi","clu"]
 #@markdown **pair msa options**
 
 #@markdown Experimental option for protein complexes. Pairing currently only supported for proteins in same operon (prokaryotic genomes).
-pair_mode = "unpaired" #@param ["unpaired","unpaired+paired","paired"] {type:"string"}
+pair_mode = args.pair_mode #@param ["unpaired","unpaired+paired","paired"] {type:"string"}
 #@markdown - `unpaired` - generate seperate MSA for each protein.
 #@markdown - `unpaired+paired` - attempt to pair sequences from the same operon within the genome. 
 #@markdown - `paired` - only use sequences that were sucessfully paired.
@@ -679,7 +669,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
       cfg.model.recycle_tol = tol
       cfg.data.eval.num_ensemble = num_ensemble
 
-      params = data.get_model_haiku_params(name,'/scratch/AlphaFold_DBs/')
+      params = data.get_model_haiku_params(name, args.data_dir)
       model_runner = model.RunModel(cfg, params, is_training=is_training)
       COMPILED = compiled
       recompile = False
@@ -726,7 +716,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
         pbar.set_description(f'Running {key}')
 
         # replace model parameters
-        params = data.get_model_haiku_params(name, '/scratch/AlphaFold_DBs/')
+        params = data.get_model_haiku_params(name, args.data_dir)
         for k in model_runner.params.keys():
           model_runner.params[k] = params[k]
 
@@ -745,7 +735,7 @@ with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
     # go through each model
     for num, model_name in enumerate(model_names):
       name = model_name+"_ptm" if use_ptm else model_name
-      params = data.get_model_haiku_params(name, '/scratch/AlphaFold_DBs/')  
+      params = data.get_model_haiku_params(name, args.data_dir)  
       cfg = config.model_config(name)
       cfg.data.common.num_recycle = cfg.model.num_recycle = max_recycles
       cfg.model.recycle_tol = tol
