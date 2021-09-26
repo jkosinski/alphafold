@@ -5,11 +5,9 @@
 This branch contains modifications from https://github.com/sokrypton/ColabFold AlphaFold2_advanced.
 Runs as a command line script instead of notebook.
 
-
-
 ## Installation instructions and running:
-    ```bash
-    cd <some software directory of choice)
+
+    cd <some software directory of choice>
     git clone https://github.com/jkosinski/alphafold.git
     cd alphafold
     git checkout sokrypton_alphafold2_advanced
@@ -17,17 +15,16 @@ Runs as a command line script instead of notebook.
     #to update the software when Jan changes sth:
     cd alphafold
     git pull origin sokrypton_alphafold2_advanced
-    ```
 
 
-## USAGE INSTRUCTIONS
+## USAGE INSTRUCTIONS (EMBL cluster)
 
-1. load AlphaFold module just to load dependencies for AlphaFold
+1. Load AlphaFold module just to load dependencies for AlphaFold
     ```bash
     module load AlphaFold/2.0.0-20210910_02_1d43aaf-fosscuda-2020b
     ```
 
-1. load dependencies for the colab script
+1. Load dependencies for the colab script
     ```bash
     module load matplotlib/3.3.3-fosscuda-2020b IPython/7.18.1-GCCcore-10.2.0 tqdm/4.60.0-GCCcore-10.2.0 #required modules compatible with fosscuda-2020b
     ```
@@ -47,7 +44,7 @@ Runs as a command line script instead of notebook.
 
 To understand mode how it works and modify other parameters you need to read the run_AF_complex.sh and sokrypton_alphafold2_advanced.py scripts.
 
-# AlphaFold
+# AlphaFold [ORIGINAL README FROM DEEPMIND'S ALPHAFOLD]
 
 This package provides an implementation of the inference pipeline of AlphaFold
 v2.0. This is a completely new model that was entered in CASP14 and published in
