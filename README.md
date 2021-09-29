@@ -48,7 +48,7 @@ Runs as a command line script instead of notebook.
     sbatch --export=fastas='"proteinA.fasta,proteinB.fasta"',jobprefix=test,homooligomer=2,max_recycles=3 --job-name=test run_AF_complex.sh
     ```
 
-    Note the outes in fastas!
+    Note the qoutes in fastas!
 
 To understand mode how it works and modify other parameters you need to read the run_AF_complex.sh and sokrypton_alphafold2_advanced.py scripts.
 
