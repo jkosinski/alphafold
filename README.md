@@ -28,23 +28,27 @@ Runs as a command line script instead of notebook.
     ```bash
     module load matplotlib/3.3.3-fosscuda-2020b IPython/7.18.1-GCCcore-10.2.0 tqdm/4.60.0-GCCcore-10.2.0 #required modules compatible with fosscuda-2020b
     ```
-1. Prepare FASTA file with the sequence formated as described in the original AlphaFold2_advanced notebook from https://github.com/sokrypton/ColabFold.
+1. Prepare FASTA files with the sequences of your proteins, one protein sequence per FASTA file
+
+1. You can add intra-chain breaks formated as described in the original AlphaFold2_advanced notebook from https://github.com/sokrypton/ColabFold with "/".
 
 1. Basic command on a workstation or interactive node:
     ```bash
     time PYTHONPATH=/g/kosinski/kosinski/devel/alphafold:$PYTHONPATH \
     TF_FORCE_UNIFIED_MEMORY='1' XLA_PYTHON_CLIENT_MEM_FRACTION='4.0' \
-    python /g/kosinski/kosinski/devel/alphafold/sokrypton_alphafold2_advanced.py --fasta test.fasta --homooligomer 2 --jobname test
+    python /g/kosinski/kosinski/devel/alphafold/sokrypton_alphafold2_advanced.py --fastas proteinA.fasta,proteinB.fasta --homooligomer 2 --jobname test
     ```
     Run the script with `-h` to see help.
     
-    `--homooligomer` can be formated as in the original notebook (e.g. `2:2` for heterotetramer with 2 copies of one protein, and 2 copies of the second).
+    `--homooligomer` can be formated as in the original notebook (e.g. `2:2` for heterotetramer with 2 copies of the first protein, and 2 copies of the second, and so on).
     You probably want to increase `--max_recycles` for bigger complexes.
 
 1. Submit on slurm cluster:
     ```bash
-    sbatch --export=fasta='test.fasta',jobprefix='test,homooligomer=2,max_recycles=3' --job-name=test run_AF_complex.sh
+    sbatch --export=fastas='"proteinA.fasta,proteinB.fasta"',jobprefix=test,homooligomer=2,max_recycles=3 --job-name=test run_AF_complex.sh
     ```
+
+    Note the outes in fastas!
 
 To understand mode how it works and modify other parameters you need to read the run_AF_complex.sh and sokrypton_alphafold2_advanced.py scripts.
 

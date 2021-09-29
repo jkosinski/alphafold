@@ -35,7 +35,9 @@ import argparse
 from itertools import groupby
 
 parser = argparse.ArgumentParser(description='Model complexes with Alphafold modified by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).')
-parser.add_argument('--fasta', type=str, required=True, help='FASTA-formatted file with the protein sequence')
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--fasta', type=str, help='FASTA-formatted file with the protein sequence')
+group.add_argument('--fastas', type=str, help='Comma-separated list of FASTA-formatted file with the protein sequences. They will be combined with ":" into a multi-chain sequence.')
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--jobname')
 group.add_argument('--jobprefix', help='The full jobname will combine this prefix with options.')
@@ -219,8 +221,18 @@ def run_jackhmmer(sequence, prefix):
 import re
 
 # define sequence
-with open(args.fasta) as fh:
-  sequence = list(fasta_iter(fh))[0][1]
+if args.fasta:
+  with open(args.fasta) as fh:
+    sequence = list(fasta_iter(fh))[0][1]
+elif args.fastas:
+  sequence = ''
+  for fn in args.fastas.split(','):
+    if sequence:
+      sequence += ':'
+    with open(fn) as fh:
+      sequence += list(fasta_iter(fh))[0][1]
+else:
+  raise RuntimeError('You must provide a sequence!')
 
 sequence = re.sub("[^A-Z:/]", "", sequence.upper())
 sequence = re.sub(":+",":",sequence)
