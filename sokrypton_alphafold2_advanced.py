@@ -49,6 +49,7 @@ parser.add_argument('--data_dir', type=str, default='/scratch/AlphaFold_DBs/', h
 parser.add_argument('--uniref90_database_path', type=str, default='/scratch/AlphaFold_DBs/uniref90/uniref90.fasta', help='Path to uniref90, (default: %(default)s)')
 parser.add_argument('--bfd_database_path', type=str, default='/scratch/AlphaFold_DBs/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt', help='Path to bfd, (default: %(default)s)')
 parser.add_argument('--mgnify_database_path', type=str, default='/scratch/AlphaFold_DBs/mgnify/mgy_clusters.fa', help='Path to bfd, (default: %(default)s)')
+parser.add_argument('--ranges', type=str, default=None, help='Residue ranges for the sequences, format like: 100-200,300-400;all;1-150, where all means all residues from the sequence')
 
 args = parser.parse_args()
 
@@ -130,6 +131,18 @@ def fasta_iter(fh):
         seq = "".join(s.strip() for s in faiter.__next__())
 
         yield (headerStr, seq)
+
+def parse_ranges(ranges_str):
+  ranges = []
+  for a_range in ranges_str.split(';'):
+    if ',' in a_range:
+      raise RuntimeError('Discontinuous ranges are not yet supported')
+    if a_range == 'all':
+      ranges.append(a_range)
+    else:
+      ranges.append(list(map(int, a_range.split('-'))))
+
+  return ranges
 
 def run_jackhmmer(sequence, prefix):
 
@@ -220,17 +233,32 @@ def run_jackhmmer(sequence, prefix):
 #@title Enter the amino acid sequence to fold ⬇️
 import re
 
+if args.ranges:
+  seq_ranges = parse_ranges(args.ranges)
+else:
+  seq_ranges = None
 # define sequence
 if args.fasta:
   with open(args.fasta) as fh:
     sequence = list(fasta_iter(fh))[0][1]
+    if seq_ranges is not None and seq_ranges != 'all':
+      start = seq_ranges[0][0]
+      end = seq_ranges[0][1]
+      sequence = sequence[start-1:end]
 elif args.fastas:
   sequence = ''
+  seq_i = 0
   for fn in args.fastas.split(','):
     if sequence:
       sequence += ':'
     with open(fn) as fh:
-      sequence += list(fasta_iter(fh))[0][1]
+      next_sequence = list(fasta_iter(fh))[0][1]
+      if seq_ranges is not None and seq_ranges[seq_i] != 'all':
+        start = seq_ranges[seq_i][0]
+        end = seq_ranges[seq_i][1]
+        next_sequence = next_sequence[start-1:end]
+      sequence += next_sequence
+      seq_i = seq_i + 1
 else:
   raise RuntimeError('You must provide a sequence!')
 
